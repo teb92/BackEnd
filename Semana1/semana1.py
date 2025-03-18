@@ -8,7 +8,7 @@ def read_tasks_from_file():
     try:
         with open(FILE_PATH, "r", encoding="utf-8") as file:
             return json.load(file)
-    except (FileNotFoundError, json.JSONDecodeError):
+    except (FileNotFoundError, json.JSONDecodeError): 
         return []  
 
 def write_task(tareas):
@@ -23,7 +23,7 @@ def write_task(tareas):
 def root():
     return "<h1>Hello, Lista!</h1>"
 
-# Create, 
+# Create
 
 @app.route("/create", methods=["POST"])
 def create_task():
@@ -49,7 +49,7 @@ def create_task():
     except Exception as ex:
         return jsonify({"error": str(ex)}), 500
 
-# Read, 
+# Read
 
 @app.route("/read", methods=["GET"])
 def read_task():
@@ -61,10 +61,7 @@ def read_task():
 
     return jsonify({"data": tareas})
 
-
-
-
-# Update, 
+# Update 
 
 @app.route("/update/<int:id>", methods=["PATCH"])
 def update_task(id):
