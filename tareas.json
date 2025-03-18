@@ -1,0 +1,68 @@
+[
+    {
+        "id": 2,
+        "titulo": "Terminar informe",
+        "descripcion": "Redactar el informe mensual para el equipo",
+        "estado": "En Progreso"
+    },
+    {
+        "id": 3,
+        "titulo": "Hacer ejercicio",
+        "descripcion": "Correr 5 km en el parque",
+        "estado": "Completada"
+    },
+    {
+        "id": 4,
+        "titulo": "Leer un libro",
+        "descripcion": "Leer 20 páginas del libro de ciencia ficción",
+        "estado": "Por Hacer"
+    },
+    {
+        "id": 5,
+        "titulo": "Llamar a mamá",
+        "descripcion": "Llamar a mamá para saludarla",
+        "estado": "Por Hacer"
+    },
+    {
+        "id": 6,
+        "titulo": "Hacer la tarea",
+        "descripcion": "Hacer la tarea de matemáticas",
+        "estado": "Por Hacer"
+    },
+    {
+        "id": 7,
+        "titulo": "Estudiar para el examen",
+        "descripcion": "Estudiar para el examen de historia",
+        "estado": "Por Hacer"
+    },
+    {
+        "id": 8,
+        "titulo": "Hacer la comida",
+        "descripcion": "Preparar la comida para la semana",
+        "estado": "Por Hacer"
+    },
+    {
+        "id": 9,
+        "titulo": "Lavar la ropa",
+        "descripcion": "Lavar la ropa sucia",
+        "estado": "Por Hacer"
+    },
+    {
+        "id": 10,
+        "titulo": "Limpiar la casa",
+        "descripcion": "Limpiar la casa de arriba a abajo",
+        "estado": "Por Hacer"
+    },
+    {
+        "id": "1",
+        "titulo": "titulo",
+        "descripcion": "descripcion",
+        "estado": "estado"
+    },
+    {
+        "id": "99",
+        "titulo": "test",
+        "descripcion": "descripcion",
+        "estado": "estado"
+    }
+]

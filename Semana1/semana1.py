@@ -1,27 +1,22 @@
 from flask import Flask, request, jsonify
-
+import json
 app = Flask(__name__)
 
-tareas = [
-    {"id": 1, "titulo": "Comprar víveres", "descripcion": "Comprar leche, pan y huevos", "estado": "Por Hacer"},
-    {"id": 2, "titulo": "Terminar informe", "descripcion": "Redactar el informe mensual para el equipo", "estado": "En Progreso"},
-    {"id": 3, "titulo": "Hacer ejercicio", "descripcion": "Correr 5 km en el parque", "estado": "Completada"},
-    {"id": 4, "titulo": "Leer un libro", "descripcion": "Leer 20 páginas del libro de ciencia ficción", "estado": "Por Hacer"}
-]
 
 FILE_PATH = "tareas.json"
-
-# Funciones auxiliares para manejar el archivo JSON
-def leer_tareas():
+def read_tasks_from_file():
     try:
         with open(FILE_PATH, "r", encoding="utf-8") as file:
             return json.load(file)
     except (FileNotFoundError, json.JSONDecodeError):
-        return []  # Si el archivo no existe o está vacío, devuelve una lista vacía
+        return []  
 
-def guardar_tareas(tareas):
-    with open(FILE_PATH, "w", encoding="utf-8") as file:
-        json.dump(tareas, file, indent=4, ensure_ascii=False)
+def write_task(tareas):
+    try:
+        with open(FILE_PATH, "w", encoding="utf-8") as file:
+            json.dump(tareas, file, indent=4, ensure_ascii=False)
+    except Exception as ex:
+        print(f"Error al escribir en el archivo: {ex}")
 
 
 @app.route("/")
@@ -34,49 +29,37 @@ def root():
 def create_task():
     try:
         data = request.json
-        if "id" not in request.json:
-            raise ValueError("id missing from the body")
         
-        if any(tarea["id"] == data["id"] for tarea in tareas):
-            return jsonify(message="ID ya existente"), 400
-        
-        
+        if not isinstance(data, dict):
+            return jsonify({"error": "Invalid JSON format"}), 400
 
-        if "titulo" not in request.json:
-            raise ValueError("titulo missing from the body")
-        
-        if "descripcion" not in request.json:
-            raise ValueError("descripcion missing from the body")
-        
-        if "estado" not in request.json:
-            raise ValueError("estado missing from the body")
+        required_fields = ["id", "titulo", "descripcion", "estado"]
+        if not all(field in data for field in required_fields):
+            return jsonify({"error": "Faltan campos obligatorios"}), 400
 
-        tareas.append(
-            {
-                "id": request.json["id"],
-                "titulo": request.json["titulo"],
-                "descripcion": request.json["descripcion"],
-                "estado": request.json["estado"]
-            }
-        )
-        return tareas
-    except ValueError as ex:
-        return jsonify(message=str(ex)), 400
+        tareas = read_tasks_from_file()
+        if any(t["id"] == data["id"] for t in tareas):
+            return jsonify({"error": "El ID ya existe."}), 400
+
+        tareas.append(data)
+        write_task(tareas)
+
+        return jsonify({"mensaje": "Tarea creada", "tarea": data}), 201
+
     except Exception as ex:
-        return jsonify(message=str(ex)), 500
+        return jsonify({"error": str(ex)}), 500
 
 # Read, 
 
 @app.route("/read", methods=["GET"])
 def read_task():
-    filtered_task = tareas
-    estado_filter = request.args.get("estado")
+    tareas = read_tasks_from_file()
+    estado_filter = request.args.get("estado") 
+    
     if estado_filter:
-        filtered_task = list(
-            filter(lambda show: show["estado"] == estado_filter, filtered_task)
-        )
+        tareas = [t for t in tareas if t["estado"] == estado_filter]
 
-    return {"data": filtered_task}
+    return jsonify({"data": tareas})
 
 
 
@@ -86,10 +69,12 @@ def read_task():
 @app.route("/update/<int:id>", methods=["PATCH"])
 def update_task(id):
     try:
+        tareas = read_tasks_from_file()
         tarea = next((t for t in tareas if t["id"] == id), None)
-        
+
         if tarea is None:
             return jsonify({"error": "Tarea no encontrada"}), 404
+        
         data = request.json
         
         if "titulo" not in request.json:
@@ -112,6 +97,7 @@ def update_task(id):
             
         
 
+        write_task(tareas)
         return jsonify({"mensaje": "Tarea actualizada", "tarea": tarea})
     
     except Exception as ex:
@@ -120,13 +106,20 @@ def update_task(id):
 
 @app.route('/delete/<int:id>', methods=['DELETE'])
 def delete_task(id):
-    index = next((i for i, tarea in enumerate(tareas) if tarea["id"] == id), None)
+    try:
+        tareas = read_tasks_from_file()
+        index = next((i for i, tarea in enumerate(tareas) if tarea["id"] == id), None)
 
-    if index is None:
-        return jsonify({"error": "Tarea no encontrada"}), 404
+        if index is None:
+            return jsonify({"error": "Tarea no encontrada"}), 404
 
-    eliminated_task = tareas.pop(index)  # Elimina la tarea de la lista
-    return jsonify({"mensaje": "Tarea eliminada", "tarea": eliminated_task})
+        eliminated_task = tareas.pop(index)  
+        write_task(tareas)
+
+        return jsonify({"mensaje": "Tarea eliminada", "tarea": eliminated_task})
+
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 500
 
 if __name__ == "__main__":
     app.run(host="localhost", port=5001, debug=True)
