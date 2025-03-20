@@ -104,7 +104,7 @@ def update_task(id):
 @app.route('/remove_task/<int:id>', methods=['DELETE'])
 def delete_task(id):
     try:
-        tareas = read_tasks_from_file()
+        tareas = read_tasks_from_file() 
         index = next((i for i, tarea in enumerate(tareas) if tarea["id"] == id), None)
 
         if index is None:
