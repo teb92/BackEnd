@@ -25,7 +25,7 @@ def root():
 
 # Create
 
-@app.route("/create", methods=["POST"])
+@app.route("/new_task", methods=["POST"])
 def create_task():
     try:
         data = request.json
@@ -51,7 +51,7 @@ def create_task():
 
 # Read
 
-@app.route("/read", methods=["GET"])
+@app.route("/view_task", methods=["GET"])
 def read_task():
     tareas = read_tasks_from_file()
     estado_filter = request.args.get("estado") 
@@ -63,7 +63,7 @@ def read_task():
 
 # Update 
 
-@app.route("/update/<int:id>", methods=["PATCH"])
+@app.route("/modify_task/<int:id>", methods=["PATCH"])
 def update_task(id):
     try:
         tareas = read_tasks_from_file()
@@ -101,7 +101,7 @@ def update_task(id):
         return jsonify({"error": str(ex)}), 500
 # Delete
 
-@app.route('/delete/<int:id>', methods=['DELETE'])
+@app.route('/remove_task/<int:id>', methods=['DELETE'])
 def delete_task(id):
     try:
         tareas = read_tasks_from_file()
