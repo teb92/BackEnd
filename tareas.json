@@ -12,12 +12,6 @@
         "estado": "Completada"
     },
     {
-        "id": 4,
-        "titulo": "Leer un libro",
-        "descripcion": "Leer 20 páginas del libro de ciencia ficción",
-        "estado": "Por Hacer"
-    },
-    {
         "id": 5,
         "titulo": "Llamar a mamá",
         "descripcion": "Llamar a mamá para saludarla",
@@ -64,5 +58,11 @@
         "titulo": "test",
         "descripcion": "descripcion",
         "estado": "estado"
+    },
+    {
+        "descripcion": "new",
+        "estado": "new",
+        "id": "43",
+        "titulo": "new"
     }
 ]

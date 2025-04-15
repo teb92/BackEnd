@@ -8,7 +8,7 @@ def read_tasks_from_file():
     try:
         with open(FILE_PATH, "r", encoding="utf-8") as file:
             return json.load(file)
-    except (FileNotFoundError, json.JSONDecodeError):
+    except (FileNotFoundError, json.JSONDecodeError): 
         return []  
 
 def write_task(tareas):
@@ -23,9 +23,9 @@ def write_task(tareas):
 def root():
     return "<h1>Hello, Lista!</h1>"
 
-# Create, 
+# Create
 
-@app.route("/create", methods=["POST"])
+@app.route("/task", methods=["POST"])
 def create_task():
     try:
         data = request.json
@@ -49,9 +49,9 @@ def create_task():
     except Exception as ex:
         return jsonify({"error": str(ex)}), 500
 
-# Read, 
+# Read
 
-@app.route("/read", methods=["GET"])
+@app.route("/task", methods=["GET"])
 def read_task():
     tareas = read_tasks_from_file()
     estado_filter = request.args.get("estado") 
@@ -61,12 +61,9 @@ def read_task():
 
     return jsonify({"data": tareas})
 
+# Update 
 
-
-
-# Update, 
-
-@app.route("/update/<int:id>", methods=["PATCH"])
+@app.route("/task/<int:id>", methods=["PATCH"])
 def update_task(id):
     try:
         tareas = read_tasks_from_file()
@@ -104,10 +101,10 @@ def update_task(id):
         return jsonify({"error": str(ex)}), 500
 # Delete
 
-@app.route('/delete/<int:id>', methods=['DELETE'])
+@app.route('/task/<int:id>', methods=['DELETE'])
 def delete_task(id):
     try:
-        tareas = read_tasks_from_file()
+        tareas = read_tasks_from_file() 
         index = next((i for i, tarea in enumerate(tareas) if tarea["id"] == id), None)
 
         if index is None:
