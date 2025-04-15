@@ -71,10 +71,13 @@ FROM Products
 WHERE Price > 50000;
 
 --    3. Obtenga todas las compras de un mismo producto por id.
-
-SELECT * 
-FROM BillProducts 
-WHERE ProductsID = 1;
+-- actualizado
+SELECT 
+    b.ID AS purchases, --Obtenga todas las compras
+    p.ProductsID
+FROM BillProducts p
+JOIN Bills b ON p.BillsID = b.ID
+WHERE p.ProductsID = 1;
 
 --    4. Obtenga todas las compras agrupadas por producto,
 -- donde se muestre el total comprado entre todas las compras.
