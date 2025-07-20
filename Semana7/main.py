@@ -225,6 +225,6 @@ def list_invoices():
         "date": inv.date.isoformat()
     } for inv in invoices]
 
-    return jsonify(result)
+    return jsonify(result)####
 
 app.run(host='localhost', port=5500, debug=True) 
