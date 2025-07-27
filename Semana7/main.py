@@ -6,6 +6,7 @@ from db import SessionLocal
 from models import User
 from models import Invoice
 from datetime import datetime
+from functools import wraps
 
 
 Base.metadata.create_all(bind=engine)
@@ -94,6 +95,25 @@ def get_current_user():
     token = token.split(" ")[1]
     return jwt_manager.decode(token)
 
+
+
+def require_role(required_role):
+    def decorator(f):
+        @wraps(f)
+        def wrapper(*args, **kwargs):
+            token = request.headers.get("Authorization")
+            if not token or not token.startswith("Bearer "):
+                return Response("Missing or invalid token", status=403)
+            try:
+                decoded = jwt_manager.decode(token.replace("Bearer ", ""))
+                if decoded.get("role") != required_role:
+                    return Response("Forbidden: Insufficient permissions", status=403)
+                return f(*args, **kwargs)
+            except Exception as e:
+                return Response("Invalid token", status=403)
+        return wrapper
+    return decorator
+
 @app.route("/products", methods=["GET"])
 def list_products():
     with SessionLocal() as db:
@@ -108,10 +128,8 @@ def list_products():
     return jsonify(result)
 
 @app.route("/products", methods=["POST"])
+@require_role("admin")
 def create_product():
-    user = get_current_user()
-    if not user or user["role"] != "admin":
-        return Response("Unauthorized", status=403)
     
     data = request.get_json()
     with SessionLocal() as db:
@@ -126,10 +144,8 @@ def create_product():
     return jsonify({"message": "Product created", "id": new_product.id})
 
 @app.route("/products/<int:product_id>", methods=["PUT"])
+@require_role("admin")
 def update_product(product_id):
-    user = get_current_user()
-    if not user or user["role"] != "admin":
-        return Response("Unauthorized", status=403)
     
     data = request.get_json()
     with SessionLocal() as db:
@@ -144,10 +160,8 @@ def update_product(product_id):
     return jsonify({"message": "Product updated"})
 
 @app.route("/products/<int:product_id>", methods=["DELETE"])
+@require_role("admin")
 def delete_product(product_id):
-    user = get_current_user()
-    if not user or user["role"] != "admin":
-        return Response("Unauthorized", status=403)
 
     with SessionLocal() as db:
         product = db.query(Product).filter(Product.id == product_id).first()
@@ -225,6 +239,6 @@ def list_invoices():
         "date": inv.date.isoformat()
     } for inv in invoices]
 
-    return jsonify(result)
+    return jsonify(result)####
 
 app.run(host='localhost', port=5500, debug=True) 
