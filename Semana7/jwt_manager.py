@@ -2,10 +2,13 @@ import jwt
 
 class JWT_Manager:
     def __init__(self):
-        with open("private.pem", "rb") as f:
+        import os
+        base_path = os.path.dirname(os.path.abspath(__file__))
+
+        with open(os.path.join(base_path, "private.pem"), "rb") as f:
             self.private_key = f.read()
 
-        with open("public.pem", "rb") as f:
+        with open(os.path.join(base_path, "public.pem"), "rb") as f:
             self.public_key = f.read()
 
         self.algorithm = "RS256"

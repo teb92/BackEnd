@@ -1,3 +1,5 @@
+from cache import CacheManager
+import json
 from jwt_manager import JWT_Manager
 from flask import Flask, request, Response, jsonify
 from db import Base, engine
@@ -8,6 +10,11 @@ from models import Invoice
 from datetime import datetime
 from functools import wraps
 
+cache = CacheManager(
+    host="xx",
+    port=xx,
+    password="xxx",
+)
 
 Base.metadata.create_all(bind=engine)
 
@@ -116,16 +123,24 @@ def require_role(required_role):
 
 @app.route("/products", methods=["GET"])
 def list_products():
+    cache_key = "products:all"
+    cached_data = cache.get(cache_key)
+
+    if cached_data:
+        return jsonify(json.loads(cached_data))
+
     with SessionLocal() as db:
         products = db.query(Product).all()
-    result = [{
-        "id": p.id,
-        "name": p.name,
-        "price": p.price,
-        "entry_date": p.entry_date.isoformat(),
-        "quantity": p.quantity
-    } for p in products]
-    return jsonify(result)
+        result = [{
+            "id": p.id,
+            "name": p.name,
+            "price": p.price,
+            "entry_date": p.entry_date.isoformat(),
+            "quantity": p.quantity
+        } for p in products]
+
+        cache.set(cache_key, json.dumps(result), ttl=3600)
+        return jsonify(result)
 
 @app.route("/products", methods=["POST"])
 @require_role("admin")
@@ -141,6 +156,7 @@ def create_product():
         db.add(new_product)
         db.commit()
         db.refresh(new_product)
+        cache.delete("products:all")
     return jsonify({"message": "Product created", "id": new_product.id})
 
 @app.route("/products/<int:product_id>", methods=["PUT"])
@@ -157,6 +173,7 @@ def update_product(product_id):
         product.price = data.get("price", product.price)
         product.quantity = data.get("quantity", product.quantity)
         db.commit()
+        cache.delete("products:all")
     return jsonify({"message": "Product updated"})
 
 @app.route("/products/<int:product_id>", methods=["DELETE"])
@@ -170,6 +187,7 @@ def delete_product(product_id):
 
         db.delete(product)
         db.commit()
+        cache.delete("products:all")
     return jsonify({"message": "Product deleted"})
 
 @app.route("/purchase", methods=["POST"])
