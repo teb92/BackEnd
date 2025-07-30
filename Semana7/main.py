@@ -7,15 +7,18 @@ from models import User
 from models import Invoice
 from datetime import datetime
 from functools import wraps
+from cacheredis import CacheManager
 
+cache = CacheManager(
+    host="XX",
+    port=XX,
+    password="XX"
+)
 
 Base.metadata.create_all(bind=engine)
 
-
 app = Flask(__name__)
-
 jwt_manager = JWT_Manager()
-
 
 @app.route("/liveness")
 def liveness():
@@ -86,7 +89,6 @@ def me():
             return Response("Missing token", status=403)
     except Exception as e:
         return Response("Internal server error", status=500)
-    
 
 def get_current_user():
     token = request.headers.get("Authorization")
@@ -94,8 +96,6 @@ def get_current_user():
         return None
     token = token.split(" ")[1]
     return jwt_manager.decode(token)
-
-
 
 def require_role(required_role):
     def decorator(f):
@@ -116,6 +116,11 @@ def require_role(required_role):
 
 @app.route("/products", methods=["GET"])
 def list_products():
+    cache_key = "products_all"
+    cached_data = cache.get(cache_key)
+    if cached_data:
+        return jsonify(cached_data)
+
     with SessionLocal() as db:
         products = db.query(Product).all()
     result = [{
@@ -125,12 +130,35 @@ def list_products():
         "entry_date": p.entry_date.isoformat(),
         "quantity": p.quantity
     } for p in products]
+
+    cache.set(cache_key, result)
     return jsonify(result)
+
+@app.route("/products/<int:product_id>", methods=["GET"])
+def get_product(product_id):
+    cache_key = f"products_{product_id}"
+    cached_data = cache.get(cache_key)
+    if cached_data:
+        return jsonify(cached_data)
+
+    with SessionLocal() as db:
+        product = db.query(Product).filter(Product.id == product_id).first()
+        if not product:
+            return Response("Product not found", status=404)
+
+        result = {
+            "id": product.id,
+            "name": product.name,
+            "price": product.price,
+            "entry_date": product.entry_date.isoformat(),
+            "quantity": product.quantity
+        }
+        cache.set(cache_key, result, ttl=300)
+        return jsonify(result)
 
 @app.route("/products", methods=["POST"])
 @require_role("admin")
 def create_product():
-    
     data = request.get_json()
     with SessionLocal() as db:
         new_product = Product(
@@ -141,12 +169,15 @@ def create_product():
         db.add(new_product)
         db.commit()
         db.refresh(new_product)
+
+    cache.delete("products_all")
+    cache.delete(f"products_{new_product.id}")
+
     return jsonify({"message": "Product created", "id": new_product.id})
 
 @app.route("/products/<int:product_id>", methods=["PUT"])
 @require_role("admin")
 def update_product(product_id):
-    
     data = request.get_json()
     with SessionLocal() as db:
         product = db.query(Product).filter(Product.id == product_id).first()
@@ -157,12 +188,15 @@ def update_product(product_id):
         product.price = data.get("price", product.price)
         product.quantity = data.get("quantity", product.quantity)
         db.commit()
+
+    cache.delete("products_all")
+    cache.delete(f"products_{product_id}")
+
     return jsonify({"message": "Product updated"})
 
 @app.route("/products/<int:product_id>", methods=["DELETE"])
 @require_role("admin")
 def delete_product(product_id):
-
     with SessionLocal() as db:
         product = db.query(Product).filter(Product.id == product_id).first()
         if not product:
@@ -170,6 +204,10 @@ def delete_product(product_id):
 
         db.delete(product)
         db.commit()
+
+    cache.delete("products_all")
+    cache.delete(f"products_{product_id}")
+
     return jsonify({"message": "Product deleted"})
 
 @app.route("/purchase", methods=["POST"])
@@ -177,31 +215,31 @@ def purchase():
     user = get_current_user()
     if not user:
         return Response("Unauthorized", status=403)
-    
+
     data = request.get_json()
     if not data or not isinstance(data, list):
         return Response("Incomplete or invalid data", status=400)
-    
+
     with SessionLocal() as db:
         invoices_created = []
-        
+
         for item in data:
             product_id = item.get("product_id")
             quantity = item.get("quantity")
-            
+
             if product_id is None or quantity is None or quantity <= 0:
                 return Response("Invalid product_id or quantity", status=400)
-            
+
             product = db.query(Product).filter(Product.id == product_id).first()
             if not product:
                 return Response(f"Product with id {product_id} not found", status=404)
-            
+
             if product.quantity < quantity:
                 return Response(f"Insufficient stock for product id {product_id}", status=400)
+
             product.quantity -= quantity
-            
             total = product.price * quantity
-            
+
             invoice = Invoice(
                 user_id=user["id"],
                 product_id=product_id,
@@ -211,26 +249,25 @@ def purchase():
             )
             db.add(invoice)
             invoices_created.append(invoice)
-        
+
         db.commit()
         for inv in invoices_created:
             db.refresh(inv)
-    
+
     return jsonify({
         "message": "Purchase successful",
         "invoices": [{"invoice_id": inv.id, "product_id": inv.product_id, "quantity": inv.quantity} for inv in invoices_created]
     })
-
 
 @app.route("/invoices", methods=["GET"])
 def list_invoices():
     user = get_current_user()
     if not user:
         return Response("Unauthorized", status=403)
-    
+
     with SessionLocal() as db:
         invoices = db.query(Invoice).filter(Invoice.user_id == user["id"]).all()
-    
+
     result = [{
         "id": inv.id,
         "product_id": inv.product_id,
@@ -239,6 +276,6 @@ def list_invoices():
         "date": inv.date.isoformat()
     } for inv in invoices]
 
-    return jsonify(result)####
+    return jsonify(result)
 
-app.run(host='localhost', port=5500, debug=True) 
+app.run(host='localhost', port=5500, debug=True)
