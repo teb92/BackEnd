@@ -22,7 +22,6 @@ class CacheManager:
             self.redis_client = None
 
     def is_connected(self):
-        """Verifica si Redis está conectado."""
         if self.redis_client is None:
             return False
         try:

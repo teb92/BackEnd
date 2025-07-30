@@ -9,10 +9,11 @@ from datetime import datetime
 from functools import wraps
 from cacheredis import CacheManager
 
+
 cache = CacheManager(
-    host="redis-19655.c52.us-east-1-4.ec2.redns.redis-cloud.com",
-    port=19655,
-    password="A1tNBns2jEpGPrkHIBpzjTvm2UoLM6bx"
+    host="xxx",
+    port=xxx,
+    password="xxx"
 )
 
 Base.metadata.create_all(bind=engine)
@@ -156,6 +157,31 @@ def get_product(product_id):
         cache.set(cache_key, result, ttl=300)
         return jsonify(result)
 
+    cache.set(cache_key, result)
+    return jsonify(result)
+
+@app.route("/products/<int:product_id>", methods=["GET"])
+def get_product(product_id):
+    cache_key = f"products_{product_id}"
+    cached_data = cache.get(cache_key)
+    if cached_data:
+        return jsonify(cached_data)
+
+    with SessionLocal() as db:
+        product = db.query(Product).filter(Product.id == product_id).first()
+        if not product:
+            return Response("Product not found", status=404)
+
+        result = {
+            "id": product.id,
+            "name": product.name,
+            "price": product.price,
+            "entry_date": product.entry_date.isoformat(),
+            "quantity": product.quantity
+        }
+        cache.set(cache_key, result, ttl=300)
+        return jsonify(result)
+
 @app.route("/products", methods=["POST"])
 @require_role("admin")
 def create_product():
@@ -169,6 +195,10 @@ def create_product():
         db.add(new_product)
         db.commit()
         db.refresh(new_product)
+
+    cache.delete("products_all")
+    cache.delete(f"products_{new_product.id}")
+
 
     cache.delete("products_all")
     cache.delete(f"products_{new_product.id}")
@@ -192,6 +222,10 @@ def update_product(product_id):
     cache.delete("products_all")
     cache.delete(f"products_{product_id}")
 
+
+    cache.delete("products_all")
+    cache.delete(f"products_{product_id}")
+
     return jsonify({"message": "Product updated"})
 
 @app.route("/products/<int:product_id>", methods=["DELETE"])
@@ -208,6 +242,10 @@ def delete_product(product_id):
     cache.delete("products_all")
     cache.delete(f"products_{product_id}")
 
+
+    cache.delete("products_all")
+    cache.delete(f"products_{product_id}")
+
     return jsonify({"message": "Product deleted"})
 
 @app.route("/purchase", methods=["POST"])
@@ -216,29 +254,37 @@ def purchase():
     if not user:
         return Response("Unauthorized", status=403)
 
+
     data = request.get_json()
     if not data or not isinstance(data, list):
         return Response("Incomplete or invalid data", status=400)
 
+
     with SessionLocal() as db:
         invoices_created = []
+
 
         for item in data:
             product_id = item.get("product_id")
             quantity = item.get("quantity")
 
+
             if product_id is None or quantity is None or quantity <= 0:
                 return Response("Invalid product_id or quantity", status=400)
+
 
             product = db.query(Product).filter(Product.id == product_id).first()
             if not product:
                 return Response(f"Product with id {product_id} not found", status=404)
 
+
             if product.quantity < quantity:
                 return Response(f"Insufficient stock for product id {product_id}", status=400)
 
+
             product.quantity -= quantity
             total = product.price * quantity
+
 
             invoice = Invoice(
                 user_id=user["id"],
@@ -250,9 +296,11 @@ def purchase():
             db.add(invoice)
             invoices_created.append(invoice)
 
+
         db.commit()
         for inv in invoices_created:
             db.refresh(inv)
+
 
     return jsonify({
         "message": "Purchase successful",
@@ -265,8 +313,10 @@ def list_invoices():
     if not user:
         return Response("Unauthorized", status=403)
 
+
     with SessionLocal() as db:
         invoices = db.query(Invoice).filter(Invoice.user_id == user["id"]).all()
+
 
     result = [{
         "id": inv.id,
@@ -277,5 +327,7 @@ def list_invoices():
     } for inv in invoices]
 
     return jsonify(result)
+    return jsonify(result)
 
+app.run(host='localhost', port=5500, debug=True)
 app.run(host='localhost', port=5500, debug=True)
