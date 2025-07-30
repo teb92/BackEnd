@@ -22,4 +22,4 @@ class JWT_Manager:
             return jwt.decode(token, self.public_key, algorithms=[self.algorithm])
         except Exception as e:
             print("Error al decodificar token:", e)
-            return None
+            return None 
