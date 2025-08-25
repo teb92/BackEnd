@@ -8,7 +8,6 @@ from sqlalchemy import MetaData
 
 DEFAULT_SCHEMA = "ECommercePets"
 metadata = MetaData(schema=DEFAULT_SCHEMA)
-
 db = SQLAlchemy(metadata=metadata)
 migrate = Migrate()
 bcrypt = Bcrypt()
