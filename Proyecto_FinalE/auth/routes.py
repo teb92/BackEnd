@@ -1,8 +1,6 @@
-
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt
-from extensions import db
-from models import User
+from auth.dao import register_user_db, verify_credentials_db 
 
 bp = Blueprint("auth", __name__)
 
@@ -12,17 +10,12 @@ def register():
     email = (data.get("email") or "").strip().lower()
     password = data.get("password")
     role = (data.get("role") or "CUSTOMER").upper()
-    if not email or not password:
-        return {"error": "email and password required"}, 400
-    if role not in ("ADMIN", "CUSTOMER"):
-        return {"error": "invalid role"}, 400
-    if User.query.filter_by(email=email).first():
-        return {"error": "email already registered"}, 409
 
-    u = User(email=email, role=role)
-    u.set_password(password)
-    db.session.add(u)
-    db.session.commit()
+    u, err = register_user_db(email=email, password=password, role=role)
+    if err:
+        status, payload = err
+        return payload, status
+
     return {"id": u.id, "email": u.email, "role": u.role}, 201
 
 @bp.post("/login")
@@ -30,8 +23,9 @@ def login():
     data = request.get_json() or {}
     email = (data.get("email") or "").strip().lower()
     password = data.get("password") or ""
-    u = User.query.filter_by(email=email).first()
-    if not u or not u.check_password(password):
+
+    u = verify_credentials_db(email=email, password=password)
+    if not u:
         return {"error": "invalid credentials"}, 401
 
     claims = {"role": u.role, "uid": u.id}
